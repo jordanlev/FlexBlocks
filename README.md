@@ -2,7 +2,8 @@ Admin interface for creating editable areas and blocks via the PageTableExtended
 
 Probably requires ProcessWire 2.5.2 (for `wireIncludeFile()` function)
 
-**NOTE**: The PageTableExtended module (a requirement of this module) currently has an issue where it does not take into account the "altFilename" setting of templates. Until this issue is addressed, you will need to apply this patch to the PageTableExtended.module file in order for the "FlexBlocks" module to work properly.
+**NOTE**: The PageTableExtended module (a requirement of this module) currently has an issue where it does not take into account the "altFilename" setting of templates. Until this issue is addressed, you will need to apply this patch to the PageTableExtended.module file in order for the "FlexBlocks" module to work properly:
+https://github.com/MadeMyDay/PageTableExtended/pull/7/files
 
 ##TODO
  * set up cache field to facilitate sane searching of area/block content
