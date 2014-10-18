@@ -1,0 +1,91 @@
+<?php
+
+require 'libraries/module_controller.php';
+require 'models/block.php';
+require 'models/field.php';
+require 'models/area.php';
+
+class FlexBlocks extends Process {
+
+	const adminPageName = 'flexblocks';
+
+	public static function getModuleInfo() {
+		return array(
+			'title' => 'FlexBlocks',
+			'summary' => 'Manage "content blocks" and editable areas to allow for a more flexible and intuitve editing experience while maintaining markup control.',
+			'version' => 050, // Module version number: use 1 for 0.0.1 or 100 for 1.0.0, and so on
+			'author' => 'Jordan Lev',
+			//'href' => 'http://modules.processwire.com/flexblocks',
+			'permission' => 'template-admin',
+			'icon' => 'language',
+			'requires' => array('FieldtypePageTable', 'FieldtypeCache'),
+		);
+	}
+	
+	public function execute() {
+		return ModuleController::execute($this, 'main');
+	}
+
+	public function executeBlocks() {
+		return ModuleController::execute($this, 'blocks');
+	}
+
+	public function executeFields() {
+		return ModuleController::execute($this, 'fields');
+	}
+
+	public function executeAreas() {
+		return ModuleController::execute($this, 'areas');
+	}
+
+/*****************************************************************************/
+
+	public function ___install() {
+		$this->installAdminPage();
+		FlexBlocksBlockModel::installBlockInstanceContainerTemplateAndPage();
+		FlexBlocksBlockModel::installBlockTemplateDispatcherAndDirectory();
+//TODO: Default block and area?
+	}
+	
+	private function installAdminPage() {
+		// create the page our module will be assigned to
+		$page = new Page();
+		$page->template = 'admin';
+		$page->name = self::adminPageName;
+
+		// installs to the admin "Setup" menu
+		$page->parent = $this->pages->get($this->config->adminRootPageID)->child('name=setup');
+		$page->process = $this;
+
+		// make the page title the same as our module title
+		$info = self::getModuleInfo();
+		$page->title = $info['title'];
+
+		// save the page
+		$page->save();
+
+		// tell the user we created this page
+		$this->message("Created Page: {$page->path}");
+	}
+
+	public function ___uninstall() {
+//TODO: Remove fields, blocks, and areas (??)
+//TODO: Delete block dispatcher and template files (???)
+		FlexBlocksBlockModel::uninstallBlockInstanceContainerPageAndTemplate();
+		$this->uninstallAdminPage();
+	}
+	
+	private function uninstallAdminPage() {
+		//Find the page we installed, locating it by the process field (which has the module ID).
+		//(It would probably be sufficient just to locate by name, but this is just to be extra sure.)
+		$moduleID = $this->modules->getModuleID($this);
+		$page = $this->pages->get("template=admin, process=$moduleID, name=" . self::adminPageName);
+
+		if($page->id) {
+			// if we found the page, let the user know and delete it
+			$this->message("Deleting Page: {$page->path}");
+			$page->delete();
+		}
+	}
+
+}
