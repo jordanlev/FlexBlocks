@@ -6,7 +6,8 @@ class AreasController extends ModuleController {
 		$form = $this->buildEditForm();
 		$id = $this->processEditForm($form);
 		if ($id) {
-			$this->session->message('Area created!');
+			$area = $this->fields->get($id);
+			$this->session->message('Area "' . $area->label . '" (PageTableExtended field "' . $area->name . '") created');
 			$this->redirect(); //pass in no args to redirect to top-level module page
 		}
 		
@@ -28,7 +29,8 @@ class AreasController extends ModuleController {
 
 		$form = $this->buildEditForm($area);
 		if ($this->processEditForm($form)) {
-			$this->session->message('Area saved!');
+			$area = $this->fields->get($id);
+			$this->session->message('Area "' . $area->label . '" (PageTableExtended field "' . $area->name . '") updated');
 			$this->redirect(); //pass in no args to redirect to top-level module page
 		}
 
@@ -50,7 +52,7 @@ class AreasController extends ModuleController {
 
 		$form = $this->buildDeleteForm($area);
 		if ($this->processDeleteForm($id, $form)) {
-			$this->session->message('Area (and all of its contents) deleted');
+			$this->session->message('Area "' . $area->label . '" (PageTableExtended field "' . $area->name . '") and all of its contents deleted');
 			$this->redirect(); //pass in no args to redirect to top-level module page
 		}
 
