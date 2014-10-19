@@ -13,7 +13,7 @@ class FlexBlocks extends Process {
 		return array(
 			'title' => 'FlexBlocks',
 			'summary' => 'Manage "content blocks" and editable areas to allow for a more flexible and intuitve editing experience while maintaining markup control.',
-			'version' => 050, // Module version number: use 1 for 0.0.1 or 100 for 1.0.0, and so on
+			'version' => '051', // Module version number: use 1 for 0.0.1 or 100 for 1.0.0, and so on
 			'author' => 'Jordan Lev',
 			//'href' => 'http://modules.processwire.com/flexblocks',
 			'permission' => 'template-admin',
@@ -41,10 +41,17 @@ class FlexBlocks extends Process {
 /*****************************************************************************/
 
 	public function ___install() {
-		$this->installAdminPage();
-		FlexBlocksBlockModel::installBlockInstanceContainerTemplateAndPage();
-		FlexBlocksBlockModel::installBlockTemplateDispatcherAndDirectory();
-//TODO: Default block and area?
+		//Attempt to create the dispatcher file and block template directory first,
+		// so if it fails we can abort the rest of the process
+		// (an exception will be thrown within the function if it fails).
+		list($file_path, $dir) = FlexBlocksBlockModel::installBlockTemplateDispatcherAndDirectory();
+		$this->message('Created file "' . $file_path . '" and directory "' . $dir . '" on the server for block templates');
+
+		list($path, $title) = FlexBlocksBlockModel::installBlockInstanceContainerTemplateAndPage();
+		$this->message('Created hidden page "' . $title . '" for block storage in the admin section at site path "' . $path . '"');
+
+		$path = $this->installAdminPage();
+		$this->message("Created admin management page: {$path}");
 	}
 	
 	private function installAdminPage() {
@@ -64,15 +71,24 @@ class FlexBlocks extends Process {
 		// save the page
 		$page->save();
 
-		// tell the user we created this page
-		$this->message("Created Page: {$page->path}");
+		return $page->path;
 	}
 
 	public function ___uninstall() {
-//TODO: Remove fields, blocks, and areas (??)
-//TODO: Delete block dispatcher and template files (???)
-		FlexBlocksBlockModel::uninstallBlockInstanceContainerPageAndTemplate();
-		$this->uninstallAdminPage();
+		FlexBlocksAreaModel::uninstallAllAreas();
+		$this->message('Deleted all areas');
+
+		FlexBlocksBlockModel::uninstallAllBlocksAndFields();
+		$this->message('Deleted all blocks and their fields');
+
+		list($path, $title) = FlexBlocksBlockModel::uninstallBlockInstanceContainerPageAndTemplate();
+		$this->message('Deleted block storage page "' . $title . '" at site path "' . $path . '" from the admin section');
+
+		$path = FlexBlocksBlockModel::uninstallBlockTemplateDispatcher(); //note that we leave the block templates intact (but the dispatcher file is generated code so it's ok for it to disappear).
+		$this->message('Deleted block template dispatcher file "' . $path . '" from server');
+		
+		$path = $this->uninstallAdminPage();
+		$this->message("Deleted admin management page: {$page->path}");
 	}
 	
 	private function uninstallAdminPage() {
@@ -81,11 +97,14 @@ class FlexBlocks extends Process {
 		$moduleID = $this->modules->getModuleID($this);
 		$page = $this->pages->get("template=admin, process=$moduleID, name=" . self::adminPageName);
 
+		$page_path = $page->path; //grab this now before page gets deleted so we can return it
+
 		if($page->id) {
 			// if we found the page, let the user know and delete it
-			$this->message("Deleting Page: {$page->path}");
 			$page->delete();
 		}
+
+		return $page_path;
 	}
 
 }

@@ -5,11 +5,16 @@ class FlexBlocksAreaModel {
 	const areaFieldPrefix = 'area_';
 
 	public static function getAll() {
-		return wire('fields')->find('name^=' . self::areaFieldPrefix . ', type=FieldtypePageTableExtended');
+		return wire('fields')->find('name^=' . self::areaFieldPrefix . ', type=FieldtypePageTableExtended, sort=title');
 	}
 
 	public static function makeAllBlocksAvailableToArea($area = null) {
-		$alphabetical_block_ids = array_map(function($block) { return $block->id; }, FlexBlocksBlockModel::getAll());
+		$alphabetical_block_ids = array();
+		$blocks = FlexBlocksBlockModel::getAll();
+		foreach ($blocks as $block) {
+			$alphabetical_block_ids[] = $block->id;
+		}
+
 		$areas = is_null($area) ? self::getAll() : array($area);
 		foreach ($areas as $area) {
 			$area->set('template_id', $alphabetical_block_ids)->save();
@@ -96,5 +101,11 @@ class FlexBlocksAreaModel {
 		//  in /wire/core/Field.php for details).
 		$field->set('flags', Field::flagSystemOverride)->set('flags', 0)->save();
 		wire('fields')->delete($field);
+	}
+
+	public static function uninstallAllAreas() {
+		foreach (self::getAll() as $area) {
+			self::delete($area->id);
+		}
 	}
 }
