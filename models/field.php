@@ -90,15 +90,16 @@ class FlexBlocksFieldModel {
 	public static function delete($id) {
 		$field = wire('fields')->get($id);
 
+		//remove the system flag so the field can be deleted
+		// (note the 2-step process... see comment on the flagSystemOverride constant
+		//  in /wire/core/Field.php for details).
+		$field->set('flags', Field::flagSystemOverride)->set('flags', 0)->save();
+
 		$block = FlexBlocksBlockModel::getByField($field);
 		$fieldgroup = $block->fieldgroup;
 		$fieldgroup->remove($field);
 		$fieldgroup->save(); //we cannot chain this particular call (because Fieldgroup::remove does not return the field object)
 		
-		//remove the system flag so the field can be deleted
-		// (note the 2-step process... see comment on the flagSystemOverride constant
-		//  in /wire/core/Field.php for details).
-		$field->set('flags', Field::flagSystemOverride)->set('flags', 0)->save();
 		wire('fields')->delete($field);
 	}
 }

@@ -73,7 +73,8 @@ class FieldsController extends ModuleController {
 		$form = $this->buildFieldForm($process_field_module, $block, $field);
 		$field_id = $this->processFieldForm($process_field_module, $block, $form);
 		if ($field_id) {
-			$this->session->message('Field updated!');
+			$field = $this->fields->get($field_id); //re-retrieve this so we have newly-updated info
+			$this->session->message('Field "' . $field->label . '" in block "' . $block->label . '" updated');
 			$this->redirect('fields', 'index', $block->id);
 		}
 
@@ -112,8 +113,8 @@ class FieldsController extends ModuleController {
 
 		$form = $this->buildDeleteForm($field, $block->id);
 		if ($this->processDeleteForm($id, $form)) {
-			$this->session->message('Field (and all of its contents) deleted');
-			$this->redirect(); //pass in no args to redirect to top-level module page
+			$this->session->message('Field "' . $field->label . '" (and all of its contents) in block "' . $block->label . '" deleted');
+			$this->redirect('fields', 'index', $block->id);
 		}
 
 		$this->set('field', $field);
