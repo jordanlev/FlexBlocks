@@ -29,7 +29,7 @@ class AreasController extends ModuleController {
 
 		$form = $this->buildEditForm($area);
 		if ($this->processEditForm($form)) {
-			$area = $this->fields->get($id);
+			$area = $this->fields->get($id); //re-retrieve this so we have newly-updated info
 			$this->session->message('Area "' . $area->label . '" (PageTableExtended field "' . $area->name . '") updated');
 			$this->redirect(); //pass in no args to redirect to top-level module page
 		}

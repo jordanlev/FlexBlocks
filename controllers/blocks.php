@@ -6,7 +6,10 @@ class BlocksController extends ModuleController {
 		$form = $this->buildEditForm();
 		$id = $this->processEditForm($form);
 		if ($id) {
-			$this->session->message('Block created!');
+			$block = $this->templates->get($id);
+			$this->session->message('Block "' . $block->label . '" (template "' . $block->name . '") created');
+			$this->session->message('New directory "' . FlexBlocksBlockModel::getBlockTemplateDirectoryPath($block->name) . '" created on server');
+			$this->session->message('New file "' . FlexBlocksBlockModel::getBlockTemplateViewFilePath($block->name) . '" created on server (put your display markup there)');
 			$this->redirect(); //pass in no args to redirect to top-level module page
 		}
 
@@ -26,9 +29,15 @@ class BlocksController extends ModuleController {
 			throw new Wire404Exception('Unknown block (it may have been recently deleted)');
 		}
 
+		$old_template_name = $block->name; //for reporting purposes only (we don't need this for functionality)
 		$form = $this->buildEditForm($block);
 		if ($this->processEditForm($form)) {
-			$this->session->message('Block saved!');
+			$block = $this->templates->get($id); //re-retrieve this so we have newly-updated info
+			$this->session->message('Block "' . $block->label . '" (template "' . $block->name . '") updated');
+			$new_template_name = $block->name;
+			if ($old_template_name != $new_template_name) {
+				$this->session->message('Block template directory renamed on server from "' . FlexBlocksBlockModel::getBlockTemplateDirectoryPath($old_template_name) . '" to "' . FlexBlocksBlockModel::getBlockTemplateDirectoryPath($new_template_name) . '"');
+			}
 			$this->redirect(); //pass in no args to redirect to top-level module page
 		}
 
@@ -50,7 +59,8 @@ class BlocksController extends ModuleController {
 
 		$form = $this->buildDeleteForm($block);
 		if ($this->processDeleteForm($id, $form)) {
-			$this->session->message('Block (and all of its contents) deleted');
+			$this->session->message('Block "' . $block->label . '" (template "' . $block->name . '") and all of its content deleted');
+			$this->session->message('Note that the block template directory "' . FlexBlocksBlockModel::getBlockTemplateDirectoryPath($block->name) . '" was NOT deleted from the server (it was left in place to preserve any custom code you might have had in there)');
 			$this->redirect(); //pass in no args to redirect to top-level module page
 		}
 

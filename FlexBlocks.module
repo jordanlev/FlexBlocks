@@ -21,7 +21,7 @@ class FlexBlocks extends Process {
 			'requires' => array('FieldtypePageTable', 'FieldtypeCache'),
 		);
 	}
-	
+
 	public function execute() {
 		return ModuleController::execute($this, 'main');
 	}

@@ -83,9 +83,9 @@ class FlexBlocksBlockModel {
 			$template->flags = Template::flagSystem; //no equivalent in dashboard (we do this to hide it from dashboard "Templates" nav menu)
 			$template->save();
 
-			$handle = self::getHandleFromName($template->name); //IMPORTANT: Retrieve the template name back from the system, because PW may have sanitized it upon save! (e.g. replace spaces with underscores)
-			self::createTemplateDir($handle);
-			self::createTemplateFile($handle); //if this fails, we don't throw an exception... user will just have to deal with it (shouldn't be hard to figure out since they have instructions to edit this file anyway).
+			//IMPORTANT: Retrieve the template name back from the system (don't just use $name), because PW may have sanitized it upon save! (e.g. replace spaces with underscores)
+			self::createTemplateDir($template->name);
+			self::createTemplateFile($template->name); //if this fails, we don't throw an exception... user will just have to deal with it (shouldn't be hard to figure out since they have instructions to edit this file anyway).
 
 			FlexBlocksAreaModel::makeAllBlocksAvailableToArea(); //re-order all blocks in all areas (by not passing in an $area arg) because we want this new block to be sorted alphabetically within existing ones
 
@@ -136,6 +136,26 @@ class FlexBlocksBlockModel {
 		wire('fieldgroups')->delete($fieldgroup);
 	}
 
+	//If no template_name is provided, we return the path to the top-level /templates/blocks directory.
+	//If a block's template_name is provided, we return the path to that block's specific subdirectory within /templates/blocks/.
+	public static function getBlockTemplateDirectoryPath($template_name = '') {
+		$path = wire('config')->paths->templates . self::blockTemplateDirname;
+		if (!empty($template_name)) {
+			$path .= '/' . self::getHandleFromName($template_name);
+		}
+
+		return $path;
+	}
+
+	public static function getBlockTemplateViewFilePath($template_name) {
+		return self::getBlockTemplateDirectoryPath($template_name) . '/' . self::blockTemplateFilename . '.' . wire('config')->templateExtension;
+	}
+	
+	public static function getBlockTemplateDispatcherFilePath() {
+		$config = wire('config');
+		return $config->paths->templates . self::blockTemplateDispatcherFilename . '.' . $config->templateExtension;
+	}	
+
 	public static function installBlockInstanceContainerTemplateAndPage() {
 		//Template...
 		$fieldgroup = new Fieldgroup();
@@ -166,9 +186,7 @@ class FlexBlocksBlockModel {
 	}
 
 	public function installBlockTemplateDispatcherAndDirectory() {
-		$config = wire('config');
-
-		$file_path = $config->paths->templates . self::blockTemplateDispatcherFilename . '.' . $config->templateExtension;
+		$file_path = self::getBlockTemplateDispatcherFilePath();
 		$contents = self::getBlockTemplateDispatcherFileContents();
 		if (!self::createFile($file_path, $contents)) {
 			if (is_file($file_path)) {
@@ -180,7 +198,7 @@ class FlexBlocksBlockModel {
 			throw new WireException('Dispatcher file "' . $file_path . '" was created but generated code could not be added to it (possibly due to file permissions on the server).');
 		}
 
-		$dir = $config->paths->templates . self::blockTemplateDirname; //<--this is for reporting purposes (we don't need it for functionality, because the createTemplateDir() function gets it on its own)
+		$dir = self::getBlockTemplateDirectoryPath(); //<--this is for reporting purposes (we don't need it for functionality, because the createTemplateDir() function gets it on its own)
 		if (!self::createTemplateDir()) {
 			throw new WireException('Installation failed: could not create block template directory at "' . $dir . '".');
 		}
@@ -215,8 +233,7 @@ class FlexBlocksBlockModel {
 	}
 
 	public static function uninstallBlockTemplateDispatcher() {
-		$config = wire('config');
-		$path = $config->paths->templates . self::blockTemplateDispatcherFilename . '.' . $config->templateExtension;
+		$path = self::getBlockTemplateDispatcherFilePath();
 		unlink($path);
 		return $path;
 	}
@@ -232,28 +249,24 @@ class FlexBlocksBlockModel {
 
 	//Attempts to create empty directory for block templates in the site templates dir.
 	//Pass an empty string to create the top-level "blocks" directory,
-	// or pass in the name of a block-specific directory you'd like to create within.
+	// or pass in the name of a block template (the full prefixed name, not the "handle")
+	// to create a subdirectory for a new block.
 	//Returns true upon success (or if a directory already exists); false upon failure.
-	private static function createTemplateDir($subdir = '') {
-		$path = wire('config')->paths->templates . self::blockTemplateDirname;
-		if (!empty($subdir)) {
-			$path .= '/' . trim($subdir, '/');
-		}
-
+	private static function createTemplateDir($template_name = '') {
+		$path = self::getBlockTemplateDirectoryPath($template_name);
 		return wireMkdir($path);
 	}
 	
-	private static function createTemplateFile($block_handle) {
-		$config = wire('config');
-		$path = $config->paths->templates . self::blockTemplateDirname . '/' . $block_handle . '/' . self::blockTemplateFilename . '.' . $config->templateExtension;
-		$contents = "<?php\n\nif (\$is_edit_mode) {\n\techo '[to display this block\\'s content, edit this file on your server: '.__FILE__.']';\n}\n";
+	private static function createTemplateFile($template_name) {
+		$path = self::getBlockTemplateViewFilePath($template_name);
+		$contents = self::getBlockTemplateViewFileContents();
 		return self::createFile($path, $contents);
 	}
 
 	private static function renameBlockTemplateDir($old_template_name, $new_template_name) {
 		$old_dir = self::getHandleFromName($old_template_name);
 		$new_dir = self::getHandleFromName($new_template_name);
-		$path = wire('config')->paths->templates . self::blockTemplateDirname;
+		$path = self::getBlockTemplateDirectoryPath();
 		rename("{$path}/{$old_subdir}", "{$path}/{$new_subdir}");
 	}
 
@@ -274,6 +287,34 @@ class FlexBlocksBlockModel {
 		wireChmod($path);
 		
 		return file_exists($path);
+	}
+
+	private static function getBlockTemplateViewFileContents() {
+		$contents = <<<CONTENTS
+<?php
+/**
+ * This file was generated by the FlexBlocks module.
+ *
+ * Within this file you can access field data via the \$block variable,
+ * for example (assuming you have fields with handles "title" and "description"):
+ *
+ *     <h2><?php echo \$block->title; ?></h2>
+ *     <div><?php echo \$block->description; ?></div>
+ *
+ * This markup will be outputted for every block
+ * that the site editor adds to an "area" on a page.
+ *
+ * You can also check the \$is_page_table variable to determine
+ * if this is the admin edit mode (as opposed to the front-end display).
+ * You might want to use this to output truncated content
+ * for the edit table (for example) -- but it is completely optional.
+ */
+
+if (\$is_page_table) {
+	echo '[to display this block\'s content, edit this file on your server: ' . __FILE__ . ']';
+}
+CONTENTS;
+		return $contents;
 	}
 
 	private static function getBlockTemplateDispatcherFileContents() {
@@ -311,7 +352,7 @@ foreach (\$page->fields as \$field) {
 //include the block template file, providing it with some useful variables
 \$vars = array(
 	'block' => \$block,
-	'is_edit_mode' => (bool)\$options['pageTableExtended'], //feature of the PageTableExtended fieldtype that lets us know if this is being displayed in edit form (as opposed to page view)
+	'is_page_table' => (bool)\$options['pageTableExtended'], //feature of the PageTableExtended fieldtype that lets us know if this is being displayed in edit form (as opposed to page view)
 );
 \$block_template_dirname = substr(\$page->template->name, strlen(\$block_prefix));
 wireIncludeFile("{\$templates_dirname}/{\$block_template_dirname}/{\$templates_filename}", \$vars);
