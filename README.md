@@ -10,5 +10,5 @@ Probably requires ProcessWire 2.5.2 (for `wireIncludeFile()` function)
  * write docs!
  * make sure it works with Repeater fieldtypes and with Fredi
  * translatable strings in code
- * figure out how to hide the "contant" tab top in the modal popup when people edit blocks
+ * figure out how to hide the "content" tab top in the modal popup when people edit blocks (and hide the messages about new pages being created, etc.)
  * allow sorting of blocks (save the sorted ids array to a module config variable). Eventually allow per-area visibility and sorting?
