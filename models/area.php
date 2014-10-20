@@ -8,7 +8,9 @@ class FlexBlocksAreaModel {
 		return wire('fields')->find('name^=' . self::areaFieldPrefix . ', type=FieldtypePageTableExtended, sort=title');
 	}
 
-	public static function makeAllBlocksAvailableToArea($area = null) {
+	//Pass in an area to make all blocks available just to that,
+	// or don't pass in an area to assign all blocks to all areas.
+	public static function assignAllBlocksToArea($area = null) {
 		$alphabetical_block_ids = array();
 		$blocks = FlexBlocksBlockModel::getAll();
 		foreach ($blocks as $block) {
@@ -18,6 +20,20 @@ class FlexBlocksAreaModel {
 		$areas = is_null($area) ? self::getAll() : array($area);
 		foreach ($areas as $area) {
 			$area->set('template_id', $alphabetical_block_ids)->save();
+		}
+	}
+
+	public static function unassignBlockFromArea($block, $area = null) {
+		$unassign_block_id = $block->id;
+		$areas = is_null($area) ? self::getAll() : array($area);
+		foreach ($areas as $area) {
+			$template_ids = $area->get('template_id');
+			if (empty($template_ids)) {
+				continue;
+			}
+
+			$template_ids = array_filter($template_ids, function($id) use ($unassign_block_id) { return ($id != $unassign_block_id); });
+			$area->set('template_id', $template_ids)->save();
 		}
 	}
 
@@ -72,7 +88,7 @@ class FlexBlocksAreaModel {
 			$field->flags = Field::flagSystem; //no equivalent in dashboard (we do this to hide it from dashboard "Fields" nav menu)
 			$field->save();
 
-			self::makeAllBlocksAvailableToArea($field);
+			self::assignAllBlocksToArea($field);
 
 		//update existing field...
 		} else {

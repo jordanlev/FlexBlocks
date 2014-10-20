@@ -83,11 +83,15 @@ class FlexBlocksBlockModel {
 			$template->flags = Template::flagSystem; //no equivalent in dashboard (we do this to hide it from dashboard "Templates" nav menu)
 			$template->save();
 
-			//IMPORTANT: Retrieve the template name back from the system (don't just use $name), because PW may have sanitized it upon save! (e.g. replace spaces with underscores)
+			//Note that when setting up directories/files,
+			// we retrieve the template name back from the object
+			// (don't just use $name from above),
+			// because PW may have sanitized it upon save
+			// (e.g. replace spaces with underscores, etc).
 			self::createTemplateDir($template->name);
 			self::createTemplateFile($template->name); //if this fails, we don't throw an exception... user will just have to deal with it (shouldn't be hard to figure out since they have instructions to edit this file anyway).
 
-			FlexBlocksAreaModel::makeAllBlocksAvailableToArea(); //re-order all blocks in all areas (by not passing in an $area arg) because we want this new block to be sorted alphabetically within existing ones
+			FlexBlocksAreaModel::assignAllBlocksToArea(); //re-order all blocks in all areas (by not passing in an $area arg) because we want this new block to be sorted alphabetically within existing ones
 
 		//update existing template...
 		} else {
@@ -119,7 +123,10 @@ class FlexBlocksBlockModel {
 	public static function delete($id) {
 		$template = wire('templates')->get($id);
 
-		//first, delete all of this block's fields
+		//unassign the block from all areas
+		FlexBlocksAreaModel::unassignBlockFromArea($template);
+
+		//delete all of this block's fields
 		foreach ($template->fields as $field) {
 			FlexBlocksFieldModel::delete($field->id);
 		}
