@@ -271,8 +271,8 @@ class FlexBlocksBlockModel {
 	}
 
 	private static function renameBlockTemplateDir($old_template_name, $new_template_name) {
-		$old_dir = self::getHandleFromName($old_template_name);
-		$new_dir = self::getHandleFromName($new_template_name);
+		$old_subdir = self::getHandleFromName($old_template_name);
+		$new_subdir = self::getHandleFromName($new_template_name);
 		$path = self::getBlockTemplateDirectoryPath();
 		rename("{$path}/{$old_subdir}", "{$path}/{$new_subdir}");
 	}
